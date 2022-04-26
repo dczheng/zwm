@@ -3,6 +3,7 @@
 #include "stdlib.h"
 #include "unistd.h"
 #include "string.h"
+#include "time.h"
 
 #include "X11/Xlib.h"
 #include "X11/Xatom.h"
@@ -11,30 +12,27 @@
 #include "X11/extensions/Xinerama.h"
 
 #define _log(_fmt, ...) {\
-    fprintf(log_fd, _fmt, ##__VA_ARGS__); \
+    time_t t = time(NULL); \
+    struct tm *lt = localtime(&t); \
+    fprintf(log_fd, \
+        "[%02d:%02d:%02d %02d/%02d/%4d] [%s] "_fmt"\n",\
+        lt->tm_hour, lt->tm_min, lt->tm_sec, \
+        lt->tm_mon+1, lt->tm_mday, lt->tm_year+1900, \
+        __FUNCTION__, ##__VA_ARGS__); \
     fflush(log_fd); \
 }
 
 #define die(_fmt, ...) { \
-    _log("die "); \
-    _log(_fmt, ##__VA_ARGS__); \
-    _log("\n"); \
+    _log("die "_fmt"\n", ##__VA_ARGS__ ); \
     exit(1); \
 } 
 
-#define warn(_fmt, ...) { \
-    _log("[%03d] %s WARNING", __LINE__, __FUNCTION__ ); \
-    _log(" "_fmt, ##__VA_ARGS__);  \
-    _log("\n"); \
-}
+#define warn(_fmt, ...) \
+    _log("WARNING "_fmt, ##__VA_ARGS__ )
 
 #define DEBUG
 #ifdef DEBUG
-#define debug(_fmt, ...) { \
-    _log("[%03d] %s", __LINE__, __FUNCTION__); \
-    _log(" "_fmt, ##__VA_ARGS__);  \
-    _log("\n"); \
-}
+#define debug(_fmt, ...) _log(_fmt, ##__VA_ARGS__) 
 #else
 #define debug(_fmt, ...) {}
 #endif
