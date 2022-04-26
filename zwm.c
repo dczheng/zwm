@@ -58,6 +58,7 @@ FILE *log_fd;
 Atom wm_protocols, wm_delete;
 
 void spawn(void*);
+void execsh(void*);
 void workspace_switch_to(void*);
 void workspace_back();
 void quit();
@@ -66,6 +67,7 @@ void client_next();
 void move_pointer();
 #define MOD(_mod) Mod1Mask|_mod
 #define SPAWN(key, arg)        {MOD(0), key, (void*)(spawn), arg}
+#define EXECSH(key, arg)       {MOD(0), key, (void*)(execsh), arg}
 #define WORKSPACE(a)           {MOD(0), XK_##a, workspace_switch_to, #a}
 #define KEY(mod, key, func)    {MOD(mod), key, (void*)(func), NULL}
 struct {
@@ -75,6 +77,7 @@ struct {
 } keys[] = {
     SPAWN(XK_Return,  "st"       ),
     SPAWN(XK_b,       "chromium" ),
+    EXECSH(XK_s,      "scrot -s -q 100 -o ~/snapshot.png" ),
     KEY(ShiftMask,  XK_c,       client_exit     ),
     KEY(ShiftMask,  XK_q,       quit            ),
     KEY(0,          XK_Tab,     workspace_back  ),
@@ -367,6 +370,19 @@ destory_notify(XEvent *e) {
 
     delete_client(c);
     focus();
+}
+
+void
+execsh(void *arg) {
+    char *cmd = (char*)arg;
+
+    debug("%s", cmd);
+    if (fork() == 0) {
+        if (display) 
+            close(ConnectionNumber(display));
+        system(cmd);
+        exit(EXIT_SUCCESS);
+    }
 }
 
 void
