@@ -305,8 +305,14 @@ move_pointer() {
 
 void
 workspace_switch_to(void *arg) {
+    int w;
+
+    w = ((char*)arg)[0] - '0';
+    if (w == workspace)
+        return;
+
     workspace_last = workspace;
-    workspace = ((char*)arg)[0] - '0';
+    workspace = w;
     debug("workspace%d", workspace);
     if (workspace_last == workspace)
         return;
