@@ -25,14 +25,14 @@
 #define die(_fmt, ...) { \
     _log("die "_fmt"\n", ##__VA_ARGS__ ); \
     exit(1); \
-} 
+}
 
 #define warn(_fmt, ...) \
     _log("WARNING "_fmt, ##__VA_ARGS__ )
 
 #define DEBUG
 #ifdef DEBUG
-#define debug(_fmt, ...) _log(_fmt, ##__VA_ARGS__) 
+#define debug(_fmt, ...) _log(_fmt, ##__VA_ARGS__)
 #else
 #define debug(_fmt, ...) {}
 #endif
@@ -46,16 +46,20 @@ struct client {
 };
 
 #define nworkspace 10
-struct client **clients[nworkspace];   
+struct client **clients[nworkspace];
 struct client *last_client=NULL;
 Display *display;
 Window root, empty;
-int running, workspace_last, workspace, screen,
+int running, last_workspace, workspace,
     nscreen;
 Cursor cursor;
-XineramaScreenInfo *screens;
+XineramaScreenInfo *screen_info;
 FILE *log_fd;
 Atom wm_protocols, wm_delete;
+
+struct {
+    int x, y, screen;
+} workspace_info[nworkspace];
 
 void spawn(void*);
 void execsh(void*);
@@ -111,26 +115,33 @@ struct {
     {DestroyNotify,    destory_notify   }
 };
 
-#define wid(w)      ((long)(w))
-#define cid(c)      wid(c->window)
-#define cur_client  clients[workspace][screen]
-#define cur_window  clients[workspace][screen]->window
-#define head(c)     clients[c->workspace][c->screen]
+#define wid(w)       ((long)(w))
+#define cid(c)       wid(c->window)
+#define cur_screen   workspace_info[workspace].screen
+#define cur_px       workspace_info[workspace].x
+#define cur_py       workspace_info[workspace].y
+#define cur_sx       screen_info[cur_screen].x_org
+#define cur_sy       screen_info[cur_screen].y_org
+#define cur_sw       screen_info[cur_screen].width
+#define cur_sh       screen_info[cur_screen].height
+#define cur_sox      (cur_sx + cur_sw / 2)
+#define cur_soy      (cur_sy + cur_sh / 2)
+#define cur_client   clients[workspace][cur_screen]
+#define cur_window   clients[workspace][cur_screen]->window
+#define head(c)      clients[c->workspace][c->screen]
 
 void
-set_screen() {
-    int di, x, y, s;
-    unsigned int dui;
+set_pointer(int x, int y) {
+    XWarpPointer(display, None, root, 0, 0, 0, 0, x, y);
+    XSync(display, False);
+}
 
+void
+get_pointer() {
+    int di;
+    unsigned int dui;
     Window dw;
-    XQueryPointer(display, root, &dw, &dw, &x, &y, &di, &di, &dui);
-    for(s=0; s<nscreen; s++)
-        if (x >= screens[s].x_org && 
-            x <= screens[s].x_org+screens[s].width &&
-            y >= screens[s].y_org &&
-            y <= screens[s].y_org+screens[s].height)
-            break;
-    screen = s;
+    XQueryPointer(display, root, &dw, &dw, &cur_px, &cur_py, &di, &di, &dui);
 }
 
 void
@@ -144,7 +155,7 @@ client_info() {
 #define fmt2 "   |--%ld"
     if (cur_client != NULL)
         debug("current: %ld %d %d", wid(cur_window),
-            workspace, screen );
+            workspace, cur_screen );
     for (i=0; i<nworkspace; i++) {
         has_clients = 0;
         for (j=0; j<nscreen; j++ )
@@ -194,9 +205,8 @@ struct client *
 new_client(Window w) {
     struct client *c =
         (struct client*) malloc(sizeof(struct client));
-    set_screen();
     c->window = w;
-    c->screen = screen;
+    c->screen = cur_screen;
     c->workspace = workspace;
     debug("%ld", cid(c));
     if (cur_client == NULL) {
@@ -294,12 +304,9 @@ void
 move_pointer() {
     if (nscreen == 1)
         return;
-    screen = (screen + 1) % nscreen;
-    debug("%d", screen);
-    XWarpPointer(display, None, root, 0, 0, 0, 0, 
-        screens[screen].x_org + screens[screen].width/2,
-        screens[screen].y_org + screens[screen].height/2
-    );
+    cur_screen = (cur_screen + 1) % nscreen;
+    debug("%d", cur_screen);
+    set_pointer(cur_sox, cur_soy);
     focus();
 }
 
@@ -311,22 +318,23 @@ workspace_switch_to(void *arg) {
     if (w == workspace)
         return;
 
-    workspace_last = workspace;
+    get_pointer();
+    last_workspace = workspace;
     workspace = w;
     debug("workspace%d", workspace);
-    if (workspace_last == workspace)
-        return;
+
     XRaiseWindow(display, empty);
     XSync(display, False);
     for(int i=0; i<nscreen; i++)
         if (clients[workspace][i] != NULL)
             XRaiseWindow(display, clients[workspace][i]->window);
+    set_pointer(cur_px, cur_py);
     focus();
 }
 
 void
 workspace_back() {
-    char a = workspace_last + '0';
+    char a = last_workspace + '0';
     workspace_switch_to(&a);
 }
 
@@ -340,7 +348,7 @@ enter_notify(XEvent *e) {
     if ((c=find_client(w)) == NULL)
         return;
     workspace = c->workspace;
-    screen = c->screen;
+    cur_screen = c->screen;
     focus();
 }
 
@@ -353,12 +361,12 @@ map_request(XEvent *e) {
     debug("%ld", wid(w));
     if ((c=find_client(w)) == NULL)
         c = new_client(w);
-    
-    XMoveResizeWindow(display, c->window, 
-        screens[c->screen].x_org,
-        screens[c->screen].y_org,
-        screens[c->screen].width,
-        screens[c->screen].height );
+
+    XMoveResizeWindow(display, c->window,
+        screen_info[c->screen].x_org,
+        screen_info[c->screen].y_org,
+        screen_info[c->screen].width,
+        screen_info[c->screen].height );
     XSelectInput(display, c->window, EnterWindowMask);
     XMapWindow(display, c->window);
     focus();
@@ -384,7 +392,7 @@ execsh(void *arg) {
 
     debug("%s", cmd);
     if (fork() == 0) {
-        if (display) 
+        if (display)
             close(ConnectionNumber(display));
         system(cmd);
         exit(EXIT_SUCCESS);
@@ -398,7 +406,7 @@ spawn(void *arg) {
 
     debug("%s", cmd);
     if (fork() == 0) {
-        if (display) 
+        if (display)
             close(ConnectionNumber(display));
         setsid();
         execvp(cmd, a);
@@ -409,8 +417,8 @@ spawn(void *arg) {
 void
 key(XEvent *e) {
     for(int i=0; i<length(keys); i++)
-        if (keys[i].key 
-            == XKeycodeToKeysym(display, (KeyCode)e->xkey.keycode, 0) 
+        if (keys[i].key
+            == XKeycodeToKeysym(display, (KeyCode)e->xkey.keycode, 0)
             && (e->xkey.state == keys[i].mod)) {
             if (keys[i].arg == NULL)
                 ((void(*)())(keys[i].func))();
@@ -453,10 +461,10 @@ setup() {
     XUngrabKey(display, AnyKey, AnyModifier, root);
     for (i = 0; i < length(keys); i++)
         if ((code = XKeysymToKeycode(display, keys[i].key)))
-                XGrabKey(display, code, keys[i].mod, root, True, 
+                XGrabKey(display, code, keys[i].mod, root, True,
         GrabModeAsync, GrabModeAsync);
     XSync(display, False);
-    empty = XCreateSimpleWindow(display, root, 0, 0, w, h, 0, 
+    empty = XCreateSimpleWindow(display, root, 0, 0, w, h, 0,
         WhitePixel(display, root), BlackPixel(display, root));
     debug("root: %ld", wid(root));
     debug("empty: %ld", wid(empty));
@@ -465,30 +473,36 @@ setup() {
     if (!XineramaIsActive(display)) {
         warn("Xinerama is not Active");
         nscreen = 1;
-        screens = malloc(sizeof(XineramaScreenInfo));
-        screens[0].x_org = 0;
-        screens[0].y_org = 0;
-        screens[0].width = w;
-        screens[0].height = h;
+        screen_info = malloc(sizeof(XineramaScreenInfo));
+        screen_info[0].x_org = 0;
+        screen_info[0].y_org = 0;
+        screen_info[0].width = w;
+        screen_info[0].height = h;
     } else {
-        screens = XineramaQueryScreens(display, &nscreen);
+        screen_info = XineramaQueryScreens(display, &nscreen);
     }
 
-    workspace_last = workspace = 1;
-    screen = 1;
+    for(i=0; i<nscreen; i++) {
+        debug("screen%i: pos: (%4d,%4d), size: %dx%d",
+                i, screen_info[i].x_org, screen_info[i].y_org,
+                screen_info[i].width, screen_info[i].height);
+    }
+
     for(i=0; i<nworkspace; i++) {
         clients[i] = (struct client**) malloc(nscreen * sizeof(struct client*));
         for(j=0; j<nscreen; j++)
             clients[i][j] = NULL;
+        workspace = i;
+        cur_screen = 0;
+        cur_px = cur_sox;
+        cur_py = cur_soy;
     }
-    for(i=0; i<nscreen; i++) {
-        debug("screen%i: pos: (%4d,%4d), size: %dx%d", 
-                i, screens[i].x_org, screens[i].y_org,
-                screens[i].width, screens[i].height);
-    }
+    last_workspace = workspace = 1;
+    cur_screen = 0;
+    set_pointer(cur_px, cur_py);
 }
 
-void 
+void
 run() {
     XEvent e;
     int i, n;
@@ -529,30 +543,41 @@ quit() {
     running = 0;
 }
 
-void 
+void
 clean() {
     int i, j;
 
+    XGrabServer(display);
+    debug();
     for (i=0; i<nworkspace; i++) {
-        debug("clean workspace%d", i);
+        debug("workspace%d", i);
         workspace = i;
         for (j=0; j<nscreen; j++ ) {
-            screen = j;
-            client_exit();
+            cur_screen = j;
+            while(cur_client != NULL) {
+                debug("screen%d, window: %ld",
+                    cur_screen, wid(cur_window));
+                XDestroyWindow(display, cur_window);
+                delete_client(cur_client);
+                XSync(display, False);
+            }
         }
-        free(clients[i]);
     }
+    client_info();
+    for(i=0; i<nworkspace; i++)
+        free(clients[i]);
     XDestroyWindow(display, empty);
     XFreeCursor(display, cursor);
     XUngrabKey(display, AnyKey, AnyModifier, root);
     XSync(display, False);
+    XUngrabServer(display);
     XCloseDisplay(display);
 }
 
 int
 main() {
     char *fn =
-        malloc(strlen(getenv("HOME") + strlen("/.zwm") + 1)); 
+        malloc(strlen(getenv("HOME") + strlen("/.zwm") + 1));
     strcpy(fn, getenv("HOME"));
     strcat(fn, "/.zwm");
     if ( (log_fd = fopen(fn, "w")) == NULL ) {
