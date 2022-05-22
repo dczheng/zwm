@@ -8,7 +8,7 @@
 FILE *log_fd;
 
 #define die(_fmt, ...) { \
-    fprintf(stderr, "die "_fmt"\n", ##__VA_ARGS__ ); \
+    fprintf(stderr, "die: "_fmt"\n", ##__VA_ARGS__ ); \
     exit(1); \
 }
 
@@ -28,6 +28,7 @@ log_open(const char* a) {
     int ret = 0;
     char *fn =
         malloc(strlen(getenv("HOME") + strlen(a) + 3));
+
     strcpy(fn, getenv("HOME"));
     strcat(fn, "/.");
     strcat(fn, a);

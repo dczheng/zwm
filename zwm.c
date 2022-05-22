@@ -1,14 +1,14 @@
-#include "stdio.h"
-#include "signal.h"
-#include "stdlib.h"
-#include "unistd.h"
-#include "string.h"
+#include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
-#include "X11/Xlib.h"
-#include "X11/Xatom.h"
-#include "X11/Xutil.h"
-#include "X11/cursorfont.h"
-#include "X11/extensions/Xinerama.h"
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
+#include <X11/cursorfont.h>
+#include <X11/extensions/Xinerama.h>
 
 #include "log.h"
 
@@ -295,7 +295,7 @@ workspace_back() {
 }
 
 void
-enter_notify(XEvent *e) {
+_EnterNotify(XEvent *e) {
     struct client *c;
     Window w;
 
@@ -309,7 +309,7 @@ enter_notify(XEvent *e) {
 }
 
 void
-map_request(XEvent *e) {
+_MapRequest(XEvent *e) {
     struct client *c;
     Window w;
 
@@ -329,7 +329,7 @@ map_request(XEvent *e) {
 }
 
 void
-destroy_notify(XEvent *e) {
+_DestroyNotify(XEvent *e) {
     Window w;
     struct client *c;
 
@@ -371,7 +371,7 @@ spawn(void *arg) {
 }
 
 void
-key(XEvent *e) {
+_KeyPress(XEvent *e) {
     for(int i=0; i<length(keys); i++)
         if (keys[i].key
             == XKeycodeToKeysym(display, (KeyCode)e->xkey.keycode, 0)
@@ -466,17 +466,17 @@ run() {
     XSync(display, False);
     running = 1;
 
-#define H(type, func) \
+#define H(type) \
     case type: \
-        func(&e); \
+        _##type(&e); \
         break;
 
     while(running && !XNextEvent(display, &e)) {
         switch(e.type) {
-            H(KeyPress, key)
-            H(MapRequest, map_request)
-            H(EnterNotify, enter_notify)
-            H(DestroyNotify, destroy_notify)
+            H(KeyPress)
+            H(MapRequest)
+            H(EnterNotify)
+            H(DestroyNotify)
             case UnmapNotify:
             case CreateNotify:
             case MapNotify:
