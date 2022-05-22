@@ -1,4 +1,5 @@
 SRC      = zwm.c
+INC      = log.h
 CC       = gcc #-E
 CFLAGS   = -I/usr/local/include \
            -Wall -Wextra \
@@ -7,10 +8,10 @@ CFLAGS   = -I/usr/local/include \
 LDFLAGS  = -L/usr/local/lib -lX11 -lXinerama
 
 OBJ = ${SRC:.c=.o}
-zwm: ${OBJ} Makefile
+zwm: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS} 
 
-.c.o:
+.c.o: ${INC} Makefile
 	${CC} -c ${CFLAGS} $<
 
 clean:
