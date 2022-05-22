@@ -522,6 +522,10 @@ clean() {
     client_info();
     for(i=0; i<nworkspace; i++)
         free(clients[i]);
+    if (!XineramaIsActive(display))
+        free(screen_info);
+    else
+        XFree(screen_info);
     XDestroyWindow(display, empty);
     XFreeCursor(display, cursor);
     XUngrabKey(display, AnyKey, AnyModifier, root);
