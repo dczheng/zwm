@@ -16,10 +16,10 @@ FILE *log_fd;
     time_t t = time(NULL); \
     struct tm *lt = localtime(&t); \
     fprintf(log_fd, \
-        "[%02d:%02d:%02d %02d/%02d/%4d] [%s] "_fmt"\n",\
+        "[%02d:%02d:%02d %02d/%02d/%4d] [%04d] [%s] "_fmt"\n",\
         lt->tm_hour, lt->tm_min, lt->tm_sec, \
         lt->tm_mon+1, lt->tm_mday, lt->tm_year+1900, \
-        __FUNCTION__, ##__VA_ARGS__); \
+        __LINE__, __FUNCTION__, ##__VA_ARGS__); \
     fflush(log_fd); \
 }
 
