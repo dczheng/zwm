@@ -73,22 +73,6 @@ struct {
     WORKSPACE(0)
 };
 
-void key(XEvent*);
-void map_request(XEvent*);
-void destory_notify(XEvent*);
-void configure_request(XEvent*);
-void configure_notify(XEvent*);
-void enter_notify(XEvent*);
-struct {
-    int type;
-    void (*func)(XEvent *);
-} handlers[] = {
-    {KeyPress,         key              },
-    {MapRequest,       map_request      },
-    {EnterNotify,      enter_notify     },
-    {DestroyNotify,    destory_notify   }
-};
-
 #define wid(w)       ((long)(w))
 #define cid(c)       wid(c->window)
 #define cur_screen   workspace_info[workspace].screen
@@ -345,7 +329,7 @@ map_request(XEvent *e) {
 }
 
 void
-destory_notify(XEvent *e) {
+destroy_notify(XEvent *e) {
     Window w;
     struct client *c;
 
@@ -477,24 +461,22 @@ setup() {
 void
 run() {
     XEvent e;
-    int i, n;
 
+    log();
     XSync(display, False);
     running = 1;
-    log();
-    while(running && !XNextEvent(display, &e)) {
-        n = length(handlers);
-        for(i=0; i<n; i++) {
-            if (e.type == handlers[i].type) {
-                if (handlers[i].func != NULL)
-                    handlers[i].func(&e);
-                break;
-            }
-        }
-        if (i<n)
-            continue;
 
+#define H(type, func) \
+    case type: \
+        func(&e); \
+        break;
+
+    while(running && !XNextEvent(display, &e)) {
         switch(e.type) {
+            H(KeyPress, key)
+            H(MapRequest, map_request)
+            H(EnterNotify, enter_notify)
+            H(DestroyNotify, destroy_notify)
             case UnmapNotify:
             case CreateNotify:
             case MapNotify:
@@ -508,6 +490,8 @@ run() {
                 log("Unsupport event %d", e.type);
         }
     }
+
+#undef H
 }
 
 void
