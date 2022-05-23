@@ -38,11 +38,11 @@ struct {
 void spawn(void*);
 void execsh(void*);
 void workspace_switch_to(void*);
-void workspace_back();
-void quit();
-void client_exit();
-void client_next();
-void move_pointer();
+void workspace_back(void);
+void quit(void);
+void client_exit(void);
+void client_next(void);
+void move_pointer(void);
 #define MOD(_mod) Mod1Mask|_mod
 #define SPAWN(key, arg)        {MOD(0), key, (void*)(spawn), arg}
 #define EXECSH(key, arg)       {MOD(0), key, (void*)(execsh), arg}
@@ -95,7 +95,7 @@ set_pointer(int x, int y) {
 }
 
 void
-get_pointer() {
+get_pointer(void) {
     int di;
     unsigned int dui;
     Window dw;
@@ -103,7 +103,7 @@ get_pointer() {
 }
 
 void
-client_info() {
+client_info(void) {
     int i, j, has_clients;
     struct client *c;
 
@@ -201,7 +201,7 @@ find_client(Window w) {
 }
 
 void
-focus() {
+focus(void) {
     if (cur_client == NULL)
         return;
     if (cur_client == last_client)
@@ -214,7 +214,7 @@ focus() {
 }
 
 void
-client_exit() {
+client_exit(void) {
     int n, exists=0;
     Atom *protocols;
     XEvent ev;
@@ -249,7 +249,7 @@ client_exit() {
 }
 
 void
-client_next() {
+client_next(void) {
     if (cur_client == NULL)
         return;
     cur_client = cur_client->next;
@@ -257,7 +257,7 @@ client_next() {
 }
 
 void
-move_pointer() {
+move_pointer(void) {
     if (nscreen == 1)
         return;
     cur_screen = (cur_screen + 1) % nscreen;
@@ -289,7 +289,7 @@ workspace_switch_to(void *arg) {
 }
 
 void
-workspace_back() {
+workspace_back(void) {
     char a = last_workspace + '0';
     workspace_switch_to(&a);
 }
@@ -391,7 +391,7 @@ xerror(Display *display, XErrorEvent *e) {
 }
 
 void
-setup() {
+setup(void) {
     XSetWindowAttributes wa;
     KeyCode code;
     int i, j, s, w, h;
@@ -459,7 +459,7 @@ setup() {
 }
 
 void
-run() {
+run(void) {
     XEvent e;
 
     log();
@@ -495,12 +495,12 @@ run() {
 }
 
 void
-quit() {
+quit(void) {
     running = 0;
 }
 
 void
-clean() {
+clean(void) {
     int i, j;
 
     XGrabServer(display);
@@ -535,7 +535,7 @@ clean() {
 }
 
 int
-main() {
+main(void) {
     if(log_open("zwm") != 0)
 	 die("can't open log");
 

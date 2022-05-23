@@ -40,6 +40,6 @@ log_open(const char* a) {
 }
 
 void
-log_close() {
+log_close(void) {
     fclose(log_fd);
 }
