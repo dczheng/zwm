@@ -8,7 +8,8 @@
 FILE *log_fd;
 
 #define die(_fmt, ...) { \
-    fprintf(stderr, "die: "_fmt"\n", ##__VA_ARGS__ ); \
+    fprintf(stderr, "die in `%s %d`: "_fmt"\n", \
+        __FUNCTION__, __LINE__, ##__VA_ARGS__ ); \
     exit(1); \
 }
 
@@ -43,3 +44,4 @@ void
 log_close(void) {
     fclose(log_fd);
 }
+
