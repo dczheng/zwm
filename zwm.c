@@ -358,13 +358,15 @@ execsh(void *arg) {
 void
 spawn(void *arg) {
     char *cmd = (char*)arg;
-    char *a[] = { NULL };
+    char *a[2];
 
     log("%s", cmd);
     if (fork() == 0) {
         if (display)
             close(ConnectionNumber(display));
         setsid();
+        a[0] = cmd;
+        a[1] = NULL;
         execvp(cmd, a);
         exit(EXIT_SUCCESS);
     }
