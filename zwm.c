@@ -53,7 +53,7 @@ struct {
     KeySym key;
     void *func, *arg;
 } keys[] = {
-    SPAWN(XK_Return,  "st"       ),
+    SPAWN(XK_Return,  "zt"       ),
     SPAWN(XK_b,       "chromium" ),
     EXECSH(XK_s,      "scrot -s -q 100 -o ~/snapshot.png" ),
     KEY(ShiftMask,  XK_c,       client_exit     ),
