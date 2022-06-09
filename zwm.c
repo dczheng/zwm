@@ -22,7 +22,6 @@ struct client {
 
 #define nworkspace 10
 struct client **clients[nworkspace];
-struct client *last_client=NULL;
 Display *display;
 Window root, empty;
 int running, last_workspace, workspace,
@@ -151,7 +150,7 @@ delete_client(struct client *c) {
         c->next->prev = c->prev;
         c->prev->next = c->next;
         if (head(c) == c)
-            head(c) = c->next;
+            head(c) = c->prev;
     }
     free(c);
     client_info();
@@ -202,6 +201,7 @@ find_client(Window w) {
 
 void
 focus(void) {
+    static struct client *last_client=NULL;
     if (cur_client == NULL)
         return;
     if (cur_client == last_client)
