@@ -318,13 +318,13 @@ _MapRequest(XEvent *e) {
     if ((c=find_client(w)) == NULL)
         c = new_client(w);
 
+    XSelectInput(display, c->window, EnterWindowMask);
+    XMapWindow(display, c->window);
     XMoveResizeWindow(display, c->window,
         screen_info[c->screen].x_org,
         screen_info[c->screen].y_org,
         screen_info[c->screen].width,
-        screen_info[c->screen].height );
-    XSelectInput(display, c->window, EnterWindowMask);
-    XMapWindow(display, c->window);
+        screen_info[c->screen].height);
     focus();
 }
 

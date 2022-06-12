@@ -11,7 +11,7 @@ OBJ = ${SRC:.c=.o}
 zwm: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS} 
 
-.c.o: ${INC} Makefile
+$(OBJ): %.o:%.c ${INC} Makefile
 	${CC} -c ${CFLAGS} $<
 
 clean:
