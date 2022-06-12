@@ -52,14 +52,14 @@ struct {
     KeySym key;
     void *func, *arg;
 } keys[] = {
-    SPAWN(XK_Return,  "zt"       ),
-    SPAWN(XK_b,       "chromium" ),
-    EXECSH(XK_s,      "scrot -s -q 100 -o ~/snapshot.png" ),
-    KEY(ShiftMask,  XK_c,       client_exit     ),
-    KEY(ShiftMask,  XK_q,       quit            ),
-    KEY(0,          XK_Tab,     workspace_back  ),
-    KEY(0,          XK_n,       client_next     ),
-    KEY(0,          XK_m,       move_pointer    ),
+    SPAWN(XK_Return,  "zt"      ),
+    SPAWN(XK_b,       "chromium"),
+    EXECSH(XK_s,      "scrot -s -q 100 -o ~/snapshot.png"),
+    KEY(ShiftMask,  XK_c,       client_exit   ),
+    KEY(ShiftMask,  XK_q,       quit          ),
+    KEY(0,          XK_Tab,     workspace_back),
+    KEY(0,          XK_n,       client_next   ),
+    KEY(0,          XK_m,       move_pointer  ),
     WORKSPACE(1),
     WORKSPACE(2),
     WORKSPACE(3),
@@ -111,10 +111,10 @@ client_info(void) {
 #define fmt2 "   |--%ld"
     if (cur_client != NULL)
         log("current: %ld %d %d", wid(cur_window),
-            workspace, cur_screen );
+            workspace, cur_screen);
     for (i=0; i<nworkspace; i++) {
         has_clients = 0;
-        for (j=0; j<nscreen; j++ )
+        for (j=0; j<nscreen; j++)
             if (clients[i][j] != NULL) {
                 has_clients = 1;
                 break;
@@ -184,7 +184,7 @@ find_client(Window w) {
     int i, j;
 
     for (i=0; i<nworkspace; i++)
-        for (j=0; j<nscreen; j++ ) {
+        for (j=0; j<nscreen; j++) {
             c = clients[i][j];
             if (c == NULL)
                 continue;
@@ -510,7 +510,7 @@ clean(void) {
     for (i=0; i<nworkspace; i++) {
         log("workspace%d", i);
         workspace = i;
-        for (j=0; j<nscreen; j++ ) {
+        for (j=0; j<nscreen; j++) {
             cur_screen = j;
             while(cur_client != NULL) {
                 log("screen%d, window: %ld",
