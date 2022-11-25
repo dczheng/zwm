@@ -422,8 +422,7 @@ setup(void) {
                 XGrabKey(display, code, keys[i].mod, root, True,
         GrabModeAsync, GrabModeAsync);
     XSync(display, False);
-    empty = XCreateSimpleWindow(display, root, 0, 0, w, h, 0,
-        WhitePixel(display, root), BlackPixel(display, root));
+    empty = XCreateSimpleWindow(display, root, 0, 0, w, h, 0, 0, 0);
     log("root: %ld", wid(root));
     log("empty: %ld", wid(empty));
     XMapRaised(display, empty);
