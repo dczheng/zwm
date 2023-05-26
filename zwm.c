@@ -54,7 +54,7 @@ struct {
 } keys[] = {
     SPAWN(XK_Return,  "zt"      ),
     SPAWN(XK_b,       "chromium"),
-    EXECSH(XK_s,      "scrot -s -q 100 -o ~/snapshot.png"),
+    EXECSH(XK_s,      "flameshot gui"),
     KEY(ShiftMask,  XK_c,       client_exit   ),
     KEY(ShiftMask,  XK_q,       quit          ),
     KEY(0,          XK_Tab,     workspace_back),
