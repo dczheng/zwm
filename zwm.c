@@ -43,7 +43,6 @@ void client_exit(void);
 void client_next(void);
 void move_pointer(void);
 #define MOD(_mod) Mod1Mask|_mod
-#define SPAWN(key, arg)        {MOD(0), key, (void*)(spawn), arg}
 #define EXECSH(key, arg)       {MOD(0), key, (void*)(execsh), arg}
 #define WORKSPACE(a)           {MOD(0), XK_##a, workspace_switch_to, #a}
 #define KEY(mod, key, func)    {MOD(mod), key, (void*)(func), NULL}
@@ -52,8 +51,8 @@ struct {
     KeySym key;
     void *func, *arg;
 } keys[] = {
-    SPAWN(XK_Return,  "zt"      ),
-    SPAWN(XK_b,       "chromium"),
+    EXECSH(XK_Return, "zt"      ),
+    EXECSH(XK_b,      "chromium"),
     EXECSH(XK_s,      "flameshot gui"),
     KEY(ShiftMask,  XK_c,       client_exit   ),
     KEY(ShiftMask,  XK_q,       quit          ),
@@ -350,24 +349,8 @@ execsh(void *arg) {
     if (fork() == 0) {
         if (display)
             close(ConnectionNumber(display));
-        system(cmd);
-        exit(EXIT_SUCCESS);
-    }
-}
-
-void
-spawn(void *arg) {
-    char *cmd = (char*)arg;
-    char *a[2];
-
-    log("%s", cmd);
-    if (fork() == 0) {
-        if (display)
-            close(ConnectionNumber(display));
         setsid();
-        a[0] = cmd;
-        a[1] = NULL;
-        execvp(cmd, a);
+        system(cmd);
         exit(EXIT_SUCCESS);
     }
 }
