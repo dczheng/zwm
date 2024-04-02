@@ -86,6 +86,11 @@ struct {
 #define cur_window   clients[workspace][cur_screen]->window
 #define head(c)      clients[c->workspace][c->screen]
 
+#define RES1080 0.5
+#define RES1400 1.0
+#define RES1440 0.6667
+#define RES2160 1.0
+
 void
 set_pointer(int x, int y) {
     XWarpPointer(display, None, root, 0, 0, 0, 0, x, y);
@@ -343,7 +348,20 @@ _DestroyNotify(XEvent *e) {
 
 void
 execsh(void *arg) {
-    char *cmd = (char*)arg;
+    char *cmd = (char*)arg, buf[32];
+    double r = 1;
+
+#define RES(s) case s: r = RES##s; break;
+    if (!strcmp(cmd, "zt")) {
+        switch (cur_sh) {
+            RES(1080);
+            RES(1400);
+            RES(1440);
+            RES(2160);
+        }
+        snprintf(buf, sizeof(buf), "zt %.2lf", r);
+        cmd = buf;
+    }
 
     log("%s", cmd);
     if (fork() == 0) {
