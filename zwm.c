@@ -34,7 +34,6 @@ struct {
     int x, y, screen;
 } workspace_info[nworkspace];
 
-void spawn(void*);
 void execsh(void*);
 void workspace_switch_to(void*);
 void workspace_back(void);
