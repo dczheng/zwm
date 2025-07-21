@@ -203,21 +203,6 @@ find_client(Window w) {
 }
 
 void
-focus(void) {
-    static struct client *last_client=NULL;
-    if (cur_client == NULL)
-        return;
-    if (cur_client == last_client)
-        return;
-    log("%ld", cid(cur_client));
-    last_client = cur_client; // avoid loop focus
-    XRaiseWindow(display, cur_window);
-    XSetInputFocus(display, cur_window,
-        RevertToPointerRoot, CurrentTime);
-    XSync(display, False);
-}
-
-void
 client_exit(void) {
     int n, exists = 0;
     Atom *protocols;
@@ -256,7 +241,7 @@ client_next(void) {
     if (cur_client == NULL)
         return;
     cur_client = cur_client->next;
-    focus();
+    XRaiseWindow(display, cur_window);
 }
 
 void
@@ -266,7 +251,7 @@ move_pointer(void) {
     cur_screen = (cur_screen + 1) % nscreen;
     log("%d", cur_screen);
     set_pointer(cur_sox, cur_soy);
-    focus();
+    XRaiseWindow(display, cur_window);
 }
 
 void
@@ -349,9 +334,12 @@ _EnterNotify(XEvent *ee) {
     log("%ld", wid(e->window));
     if ((c = find_client(e->window)) == NULL)
         return;
+
     workspace = c->workspace;
     cur_screen = c->screen;
-    focus();
+    XSetInputFocus(display, cur_window,
+        RevertToPointerRoot, CurrentTime);
+    XSync(display, False);
 }
 
 void
