@@ -36,7 +36,7 @@ struct {
 
 void execsh(void*);
 void workspace_switch_to(void*);
-void workspace_back(void);
+void workspace_toggle(void);
 void quit(void);
 void client_exit(void);
 void client_next(void);
@@ -55,7 +55,7 @@ struct {
     EXECSH(XK_s,      "flameshot gui"),
     KEY(ShiftMask,  XK_c,       client_exit   ),
     KEY(ShiftMask,  XK_q,       quit          ),
-    KEY(0,          XK_Tab,     workspace_back),
+    KEY(0,          XK_Tab,     workspace_toggle),
     KEY(0,          XK_n,       client_next   ),
     KEY(0,          XK_m,       move_pointer  ),
     WORKSPACE(1),
@@ -276,7 +276,7 @@ workspace_switch_to(void *arg) {
 }
 
 void
-workspace_back(void) {
+workspace_toggle(void) {
     char a = last_workspace + '0';
     workspace_switch_to(&a);
 }
