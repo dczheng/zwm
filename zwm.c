@@ -209,6 +209,7 @@ focus(void) {
         return;
     if (cur_client == last_client)
         return;
+    log("%ld", cid(cur_client));
     last_client = cur_client; // avoid loop focus
     XRaiseWindow(display, cur_window);
     XSetInputFocus(display, cur_window,
@@ -218,7 +219,7 @@ focus(void) {
 
 void
 client_exit(void) {
-    int n, exists=0;
+    int n, exists = 0;
     Atom *protocols;
     XEvent ev;
 
@@ -248,7 +249,6 @@ client_exit(void) {
     delete_client(cur_client);
     XSync(display, False);
     XUngrabServer(display);
-    focus();
 }
 
 void
@@ -280,7 +280,7 @@ workspace_switch_to(void *arg) {
     get_pointer();
     last_workspace = workspace;
     workspace = w;
-    log("workspace%d", workspace);
+    log("%d", workspace);
 
     XRaiseWindow(display, empty);
     XSync(display, False);
@@ -288,7 +288,6 @@ workspace_switch_to(void *arg) {
         if (clients[workspace][i] != NULL)
             XRaiseWindow(display, clients[workspace][i]->window);
     set_pointer(cur_px, cur_py);
-    focus();
 }
 
 void
@@ -339,14 +338,7 @@ _CreateNotify(XEvent *ee) {
 void
 _DestroyNotify(XEvent *ee) {
     XDestroyWindowEvent *e = &ee->xdestroywindow;
-    struct client *c;
-
     log("%ld", wid(e->window));
-    if ((c = find_client(e->window)) == NULL)
-        return;
-
-    delete_client(c);
-    focus();
 }
 
 void
@@ -392,18 +384,23 @@ _MapRequest(XEvent *ee) {
         screen_info[c->screen].y_org,
         screen_info[c->screen].width,
         screen_info[c->screen].height);
-    focus();
-}
-
-void
-_MappingNotify(XEvent *ee) {
-    XMappingEvent *e = &ee->xmapping;
-    log("%ld", wid(e->window));
 }
 
 void
 _UnmapNotify(XEvent *ee) {
     XUnmapEvent *e = &ee->xunmap;
+    struct client *c;
+
+    log("%ld", wid(e->window));
+    if ((c = find_client(e->window)) == NULL)
+        return;
+
+    delete_client(c);
+}
+
+void
+_MappingNotify(XEvent *ee) {
+    XMappingEvent *e = &ee->xmapping;
     log("%ld", wid(e->window));
 }
 
