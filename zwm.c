@@ -115,9 +115,9 @@ client_info(void) {
     if (cur_client != NULL)
         log("current: %ld %d %d", wid(cur_window),
             workspace, cur_screen);
-    for (i=0; i<nworkspace; i++) {
+    for (i = 0; i < nworkspace; i++) {
         has_clients = 0;
-        for (j=0; j<nscreen; j++)
+        for (j = 0; j < nscreen; j++)
             if (clients[i][j] != NULL) {
                 has_clients = 1;
                 break;
@@ -125,7 +125,7 @@ client_info(void) {
         if (!has_clients)
             continue;
         log(fmt0, i);
-        for (j=0; j<nscreen; j++) {
+        for (j = 0; j < nscreen; j++) {
             c = clients[i][j];
             if (c == NULL)
                 continue;
@@ -186,8 +186,8 @@ find_client(Window w) {
     struct client *c;
     int i, j;
 
-    for (i=0; i<nworkspace; i++)
-        for (j=0; j<nscreen; j++) {
+    for (i = 0; i < nworkspace; i++)
+        for (j = 0; j < nscreen; j++) {
             c = clients[i][j];
             if (c == NULL)
                 continue;
@@ -284,7 +284,7 @@ workspace_switch_to(void *arg) {
 
     XRaiseWindow(display, empty);
     XSync(display, False);
-    for(int i=0; i<nscreen; i++)
+    for(int i = 0; i < nscreen; i++)
         if (clients[workspace][i] != NULL)
             XRaiseWindow(display, clients[workspace][i]->window);
     set_pointer(cur_px, cur_py);
@@ -298,51 +298,8 @@ workspace_back(void) {
 }
 
 void
-_EnterNotify(XEvent *e) {
-    struct client *c;
-    Window w;
-
-    w = ((XCrossingEvent*)&e->xcrossing)->window;
-    log("%ld", wid(w));
-    if ((c=find_client(w)) == NULL)
-        return;
-    workspace = c->workspace;
-    cur_screen = c->screen;
-    focus();
-}
-
-void
-_MapRequest(XEvent *e) {
-    struct client *c;
-    Window w;
-
-    w = e->xmaprequest.window;
-    log("%ld", wid(w));
-    if ((c=find_client(w)) == NULL)
-        c = new_client(w);
-
-    XSelectInput(display, c->window, EnterWindowMask);
-    XMapWindow(display, c->window);
-    XMoveResizeWindow(display, c->window,
-        screen_info[c->screen].x_org,
-        screen_info[c->screen].y_org,
-        screen_info[c->screen].width,
-        screen_info[c->screen].height);
-    focus();
-}
-
-void
-_DestroyNotify(XEvent *e) {
-    Window w;
-    struct client *c;
-
-    w = e->xdestroywindow.window;
-    log("%ld", wid(w));
-    if ((c=find_client(w)) == NULL)
-        return;
-
-    delete_client(c);
-    focus();
+quit(void) {
+    running = 0;
 }
 
 void
@@ -373,16 +330,139 @@ execsh(void *arg) {
 }
 
 void
-_KeyPress(XEvent *e) {
-    for(int i=0; i<length(keys); i++)
+_CreateNotify(XEvent *ee) {
+    XCreateWindowEvent *e = &ee->xcreatewindow;
+    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+        e->x, e->y, e->width, e->height);
+}
+
+void
+_DestroyNotify(XEvent *ee) {
+    XDestroyWindowEvent *e = &ee->xdestroywindow;
+    struct client *c;
+
+    log("%ld", wid(e->window));
+    if ((c = find_client(e->window)) == NULL)
+        return;
+
+    delete_client(c);
+    focus();
+}
+
+void
+_EnterNotify(XEvent *ee) {
+    XCrossingEvent *e = &ee->xcrossing;
+    struct client *c;
+
+    log("%ld", wid(e->window));
+    if ((c = find_client(e->window)) == NULL)
+        return;
+    workspace = c->workspace;
+    cur_screen = c->screen;
+    focus();
+}
+
+void
+_ConfigureNotify(XEvent *ee) {
+    XConfigureEvent *e = &ee->xconfigure;
+    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+        e->x, e->y, e->width, e->height);
+}
+
+void
+_ConfigureRequest(XEvent *ee) {
+    XConfigureRequestEvent *e = &ee->xconfigurerequest;
+    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+        e->x, e->y, e->width, e->height);
+}
+
+void
+_MapRequest(XEvent *ee) {
+    XMapRequestEvent *e = &ee->xmaprequest;
+    struct client *c;
+
+    log("%ld", wid(e->window));
+    if ((c = find_client(e->window)) == NULL)
+        c = new_client(e->window);
+
+    XSelectInput(display, c->window, EnterWindowMask);
+    XMapWindow(display, c->window);
+    XMoveResizeWindow(display, c->window,
+        screen_info[c->screen].x_org,
+        screen_info[c->screen].y_org,
+        screen_info[c->screen].width,
+        screen_info[c->screen].height);
+    focus();
+}
+
+void
+_MappingNotify(XEvent *ee) {
+    XMappingEvent *e = &ee->xmapping;
+    log("%ld", wid(e->window));
+}
+
+void
+_UnmapNotify(XEvent *ee) {
+    XUnmapEvent *e = &ee->xunmap;
+    log("%ld", wid(e->window));
+}
+
+void
+_MapNotify(XEvent *ee) {
+    XMapEvent *e = &ee->xmap;
+    log("%ld", wid(e->window));
+}
+
+void
+_KeyPress(XEvent *ee) {
+    XKeyEvent *e = &ee->xkey;
+    int i;
+
+    for(i = 0; i < length(keys); i++)
         if (keys[i].key
-            == XKeycodeToKeysym(display, (KeyCode)e->xkey.keycode, 0)
-            && (e->xkey.state == keys[i].mod)) {
+            == XKeycodeToKeysym(display, (KeyCode)e->keycode, 0)
+            && (e->state == keys[i].mod)) {
             if (keys[i].arg == NULL)
                 ((void(*)())(keys[i].func))();
             else
                 ((void(*)(void*))(keys[i].func))(keys[i].arg);
         }
+}
+
+void
+run(void) {
+    XEvent e;
+
+    log();
+    XSync(display, False);
+    running = 1;
+
+#define H(type) \
+    case type: \
+        _##type(&e); \
+        break;
+
+    while(running && !XNextEvent(display, &e)) {
+        switch(e.type) {
+            H(KeyPress)
+            H(MapRequest)
+            H(EnterNotify)
+            H(DestroyNotify)
+            H(MapNotify)
+            H(MappingNotify)
+            H(UnmapNotify)
+            H(ConfigureNotify)
+            H(ConfigureRequest)
+            H(CreateNotify)
+            case KeyRelease:
+            case ClientMessage:
+                break;
+            default:
+                log("Unsupport event %d", e.type);
+        }
+    }
+
+#undef H
 }
 
 int
@@ -439,15 +519,15 @@ setup(void) {
         screen_info = XineramaQueryScreens(display, &nscreen);
     }
 
-    for(i=0; i<nscreen; i++) {
+    for(i = 0; i < nscreen; i++) {
         log("screen%i: pos: (%4d,%4d), size: %dx%d",
                 i, screen_info[i].x_org, screen_info[i].y_org,
                 screen_info[i].width, screen_info[i].height);
     }
 
-    for(i=0; i<nworkspace; i++) {
+    for(i = 0; i < nworkspace; i++) {
         clients[i] = (struct client**) malloc(nscreen * sizeof(struct client*));
-        for(j=0; j<nscreen; j++)
+        for(j = 0; j < nscreen; j++)
             clients[i][j] = NULL;
         workspace = i;
         cur_screen = 0;
@@ -460,56 +540,15 @@ setup(void) {
 }
 
 void
-run(void) {
-    XEvent e;
-
-    log();
-    XSync(display, False);
-    running = 1;
-
-#define H(type) \
-    case type: \
-        _##type(&e); \
-        break;
-
-    while(running && !XNextEvent(display, &e)) {
-        switch(e.type) {
-            H(KeyPress)
-            H(MapRequest)
-            H(EnterNotify)
-            H(DestroyNotify)
-            case UnmapNotify:
-            case CreateNotify:
-            case MapNotify:
-            case MappingNotify:
-            case ConfigureNotify:
-            case ConfigureRequest:
-            case KeyRelease:
-            case ClientMessage:
-                break;
-            default:
-                log("Unsupport event %d", e.type);
-        }
-    }
-
-#undef H
-}
-
-void
-quit(void) {
-    running = 0;
-}
-
-void
 clean(void) {
     int i, j;
 
     XGrabServer(display);
     log();
-    for (i=0; i<nworkspace; i++) {
+    for (i = 0; i < nworkspace; i++) {
         log("workspace%d", i);
         workspace = i;
-        for (j=0; j<nscreen; j++) {
+        for (j = 0; j < nscreen; j++) {
             cur_screen = j;
             while(cur_client != NULL) {
                 log("screen%d, window: %ld",
@@ -521,7 +560,7 @@ clean(void) {
         }
     }
     client_info();
-    for(i=0; i<nworkspace; i++)
+    for(i = 0; i < nworkspace; i++)
         free(clients[i]);
     if (!XineramaIsActive(display))
         free(screen_info);
