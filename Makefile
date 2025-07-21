@@ -1,5 +1,5 @@
 SRC      = zwm.c
-INC      = log.h
+INC      =
 CC       = gcc #-E
 CFLAGS   = -I/usr/local/include \
            -Wall -Wextra \

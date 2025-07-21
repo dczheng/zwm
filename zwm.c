@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
+#include <limits.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -10,9 +12,25 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xinerama.h>
 
-#include "log.h"
-
 #define length(_x) ((int)(sizeof(_x) / sizeof(_x[0])))
+
+FILE *log_fd;
+#define DIE(_fmt, ...) { \
+    fprintf(stderr, "die in `%s %d`: "_fmt"\n", \
+        __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+    exit(1); \
+}
+
+#define LOG(_fmt, ...) { \
+    time_t t = time(NULL); \
+    struct tm *lt = localtime(&t); \
+    fprintf(log_fd, \
+        "[%02d:%02d:%02d %02d/%02d/%4d] [%04d] [%s] "_fmt"\n",\
+        lt->tm_hour, lt->tm_min, lt->tm_sec, \
+        lt->tm_mon+1, lt->tm_mday, lt->tm_year+1900, \
+        __LINE__, __FUNCTION__, ##__VA_ARGS__); \
+    fflush(log_fd); \
+}
 
 struct client {
     Window window;
@@ -50,14 +68,14 @@ struct {
     KeySym key;
     void *func, *arg;
 } keys[] = {
-    EXECSH(XK_Return, "zt"      ),
+    EXECSH(XK_Return, "zt"),
     EXECSH(XK_b,      "chromium"),
     EXECSH(XK_s,      "flameshot gui"),
-    KEY(ShiftMask,  XK_c,       client_exit   ),
-    KEY(ShiftMask,  XK_q,       quit          ),
+    KEY(ShiftMask,  XK_c,       client_exit),
+    KEY(ShiftMask,  XK_q,       quit),
     KEY(0,          XK_Tab,     workspace_toggle),
-    KEY(0,          XK_n,       client_next   ),
-    KEY(0,          XK_m,       move_pointer  ),
+    KEY(0,          XK_n,       client_next),
+    KEY(0,          XK_m,       move_pointer),
     WORKSPACE(1),
     WORKSPACE(2),
     WORKSPACE(3),
@@ -113,7 +131,7 @@ client_info(void) {
 #define fmt1 "|--screen%d"
 #define fmt2 "   |--%ld"
     if (cur_client != NULL)
-        log("current: %ld %d %d", wid(cur_window),
+        LOG("current: %ld %d %d", wid(cur_window),
             workspace, cur_screen);
     for (i = 0; i < nworkspace; i++) {
         has_clients = 0;
@@ -124,16 +142,16 @@ client_info(void) {
             }
         if (!has_clients)
             continue;
-        log(fmt0, i);
+        LOG(fmt0, i);
         for (j = 0; j < nscreen; j++) {
             c = clients[i][j];
             if (c == NULL)
                 continue;
-            log(fmt1, j);
-            log(fmt2, cid(c));
+            LOG(fmt1, j);
+            LOG(fmt2, cid(c));
             while(c->next != head(c)) {
                 c = c->next;
-                log(fmt2, cid(c));
+                LOG(fmt2, cid(c));
             }
         }
     }
@@ -146,7 +164,7 @@ void
 delete_client(struct client *c) {
     if (c == NULL)
         return;
-    log("%ld", cid(c));
+    LOG("%ld", cid(c));
     if (c->next == c) {
         head(c) = NULL;
     } else {
@@ -166,7 +184,7 @@ new_client(Window w) {
     c->window = w;
     c->screen = cur_screen;
     c->workspace = workspace;
-    log("%ld", cid(c));
+    LOG("%ld", cid(c));
     if (cur_client == NULL) {
         c->next = c;
         c->prev = c;
@@ -210,7 +228,7 @@ client_exit(void) {
 
     if (cur_client == NULL)
         return;
-    log("%ld", cid(cur_client));
+    LOG("%ld", cid(cur_client));
     if (XGetWMProtocols(display, cur_window, &protocols, &n)) {
         while (!exists && n--)
             exists = protocols[n] == wm_delete;
@@ -228,7 +246,7 @@ client_exit(void) {
         return;
     }
 
-    log("[force] %ld", cid(cur_client));
+    LOG("[force] %ld", cid(cur_client));
     XGrabServer(display);
     XDestroyWindow(display, cur_window);
     delete_client(cur_client);
@@ -249,7 +267,7 @@ move_pointer(void) {
     if (nscreen == 1)
         return;
     cur_screen = (cur_screen + 1) % nscreen;
-    log("%d", cur_screen);
+    LOG("%d", cur_screen);
     set_pointer(cur_sox, cur_soy);
     XRaiseWindow(display, cur_window);
 }
@@ -265,7 +283,7 @@ workspace_switch_to(void *arg) {
     get_pointer();
     last_workspace = workspace;
     workspace = w;
-    log("%d", workspace);
+    LOG("%d", workspace);
 
     XRaiseWindow(display, empty);
     XSync(display, False);
@@ -303,7 +321,7 @@ execsh(void *arg) {
         cmd = buf;
     }
 
-    log("%s", cmd);
+    LOG("%s", cmd);
     if (fork() == 0) {
         if (display)
             close(ConnectionNumber(display));
@@ -316,14 +334,14 @@ execsh(void *arg) {
 void
 _CreateNotify(XEvent *ee) {
     XCreateWindowEvent *e = &ee->xcreatewindow;
-    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+    LOG("%ld (%d, %d) (%d, %d)", wid(e->window),
         e->x, e->y, e->width, e->height);
 }
 
 void
 _DestroyNotify(XEvent *ee) {
     XDestroyWindowEvent *e = &ee->xdestroywindow;
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
 }
 
 void
@@ -331,7 +349,7 @@ _EnterNotify(XEvent *ee) {
     XCrossingEvent *e = &ee->xcrossing;
     struct client *c;
 
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
     if ((c = find_client(e->window)) == NULL)
         return;
 
@@ -345,14 +363,14 @@ _EnterNotify(XEvent *ee) {
 void
 _ConfigureNotify(XEvent *ee) {
     XConfigureEvent *e = &ee->xconfigure;
-    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+    LOG("%ld (%d, %d) (%d, %d)", wid(e->window),
         e->x, e->y, e->width, e->height);
 }
 
 void
 _ConfigureRequest(XEvent *ee) {
     XConfigureRequestEvent *e = &ee->xconfigurerequest;
-    log("%ld (%d, %d) (%d, %d)", wid(e->window),
+    LOG("%ld (%d, %d) (%d, %d)", wid(e->window),
         e->x, e->y, e->width, e->height);
 }
 
@@ -361,7 +379,7 @@ _MapRequest(XEvent *ee) {
     XMapRequestEvent *e = &ee->xmaprequest;
     struct client *c;
 
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
     if ((c = find_client(e->window)) == NULL)
         c = new_client(e->window);
 
@@ -379,7 +397,7 @@ _UnmapNotify(XEvent *ee) {
     XUnmapEvent *e = &ee->xunmap;
     struct client *c;
 
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
     if ((c = find_client(e->window)) == NULL)
         return;
 
@@ -389,13 +407,13 @@ _UnmapNotify(XEvent *ee) {
 void
 _MappingNotify(XEvent *ee) {
     XMappingEvent *e = &ee->xmapping;
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
 }
 
 void
 _MapNotify(XEvent *ee) {
     XMapEvent *e = &ee->xmap;
-    log("%ld", wid(e->window));
+    LOG("%ld", wid(e->window));
 }
 
 void
@@ -418,7 +436,7 @@ void
 run(void) {
     XEvent e;
 
-    log();
+    LOG();
     XSync(display, False);
     running = 1;
 
@@ -443,7 +461,7 @@ run(void) {
             case ClientMessage:
                 break;
             default:
-                log("Unsupport event %d", e.type);
+                LOG("Unsupport event %d", e.type);
         }
     }
 
@@ -453,7 +471,7 @@ run(void) {
 int
 xerror(Display *display, XErrorEvent *e) {
     XSync(display, False);
-    log("error: %d", e->error_code);
+    LOG("error: %d", e->error_code);
     return 0;
 }
 
@@ -463,9 +481,9 @@ setup(void) {
     KeyCode code;
     int i, j, s, w, h;
 
-    log();
+    LOG();
     if (!(display = XOpenDisplay(NULL)))
-        die("cannot open display");
+        DIE("cannot open display");
 
     XSetErrorHandler(xerror);
     s = DefaultScreen(display);
@@ -488,12 +506,12 @@ setup(void) {
         GrabModeAsync, GrabModeAsync);
     XSync(display, False);
     empty = XCreateSimpleWindow(display, root, 0, 0, w, h, 0, 0, 0);
-    log("root: %ld", wid(root));
-    log("empty: %ld", wid(empty));
+    LOG("root: %ld", wid(root));
+    LOG("empty: %ld", wid(empty));
     XMapRaised(display, empty);
 
     if (!XineramaIsActive(display)) {
-        log("Xinerama is not Active");
+        LOG("Xinerama is not Active");
         nscreen = 1;
         screen_info = malloc(sizeof(XineramaScreenInfo));
         screen_info[0].x_org = 0;
@@ -505,7 +523,7 @@ setup(void) {
     }
 
     for(i = 0; i < nscreen; i++) {
-        log("screen%i: pos: (%4d,%4d), size: %dx%d",
+        LOG("screen%i: pos: (%4d,%4d), size: %dx%d",
                 i, screen_info[i].x_org, screen_info[i].y_org,
                 screen_info[i].width, screen_info[i].height);
     }
@@ -529,14 +547,14 @@ clean(void) {
     int i, j;
 
     XGrabServer(display);
-    log();
+    LOG();
     for (i = 0; i < nworkspace; i++) {
-        log("workspace%d", i);
+        LOG("workspace%d", i);
         workspace = i;
         for (j = 0; j < nscreen; j++) {
             cur_screen = j;
             while(cur_client != NULL) {
-                log("screen%d, window: %ld",
+                LOG("screen%d, window: %ld",
                     cur_screen, wid(cur_window));
                 XDestroyWindow(display, cur_window);
                 delete_client(cur_client);
@@ -561,16 +579,19 @@ clean(void) {
 
 int
 main(void) {
-    if(log_open("zwm") != 0)
-	 die("can't open log");
+    char fn[PATH_MAX];
+
+    sprintf(fn, "%s/.zwm", getenv("HOME"));
+    if ((log_fd = fopen(fn, "w")) == NULL)
+        DIE("can't open log");
 
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
-        die("can't set SIGCHLD");
+        DIE("can't set SIGCHLD");
 
     setup();
     run();
     clean();
 
-    log_close();
+    fclose(log_fd);
     return 0;
 }
