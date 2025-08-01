@@ -175,6 +175,8 @@ delete_client(struct client *c) {
     }
     free(c);
     client_info();
+    if (cur_client)
+        XRaiseWindow(display, cur_window);
 }
 
 struct client *
