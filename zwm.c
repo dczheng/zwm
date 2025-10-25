@@ -271,7 +271,8 @@ move_pointer(void) {
     cur_screen = (cur_screen + 1) % nscreen;
     LOG("%d", cur_screen);
     set_pointer(cur_sox, cur_soy);
-    XRaiseWindow(display, cur_window);
+    if (cur_client)
+        XRaiseWindow(display, cur_window);
 }
 
 void
