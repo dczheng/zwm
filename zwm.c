@@ -59,6 +59,7 @@ void quit(void);
 void client_exit(void);
 void client_next(void);
 void move_pointer(void);
+void move_window(void);
 #define MOD(_mod) Mod1Mask|_mod
 #define EXECSH(key, arg)       {MOD(0), key, (void*)(execsh), arg}
 #define WORKSPACE(a)           {MOD(0), XK_##a, workspace_switch_to, #a}
@@ -76,6 +77,7 @@ struct {
     KEY(0,          XK_Tab,     workspace_toggle),
     KEY(0,          XK_n,       client_next),
     KEY(0,          XK_m,       move_pointer),
+    KEY(ShiftMask,  XK_m,       move_window),
     WORKSPACE(1),
     WORKSPACE(2),
     WORKSPACE(3),
@@ -276,6 +278,40 @@ move_pointer(void) {
 }
 
 void
+_map_window(Window w) {
+    struct client *c;
+
+    if ((c = find_client(w)) == NULL)
+        c = new_client(w);
+
+    XSelectInput(display, w, EnterWindowMask);
+    XMapWindow(display,w);
+    XMoveResizeWindow(display, c->window,
+        screen_info[c->screen].x_org,
+        screen_info[c->screen].y_org,
+        screen_info[c->screen].width,
+        screen_info[c->screen].height);
+}
+
+void
+move_window(void) {
+    Window w;
+
+    if (nscreen == 1)
+        return;
+
+    if (cur_client == NULL)
+        return;
+
+    w = cur_window;
+
+    delete_client(cur_client);
+    move_pointer();
+    _map_window(w);
+    XRaiseWindow(display, w);
+}
+
+void
 workspace_switch_to(void *arg) {
     int w;
 
@@ -380,19 +416,8 @@ _ConfigureRequest(XEvent *ee) {
 void
 _MapRequest(XEvent *ee) {
     XMapRequestEvent *e = &ee->xmaprequest;
-    struct client *c;
-
     LOG("%ld", wid(e->window));
-    if ((c = find_client(e->window)) == NULL)
-        c = new_client(e->window);
-
-    XSelectInput(display, c->window, EnterWindowMask);
-    XMapWindow(display, c->window);
-    XMoveResizeWindow(display, c->window,
-        screen_info[c->screen].x_org,
-        screen_info[c->screen].y_org,
-        screen_info[c->screen].width,
-        screen_info[c->screen].height);
+    _map_window(e->window);
 }
 
 void
