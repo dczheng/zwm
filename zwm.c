@@ -58,8 +58,8 @@ void workspace_toggle(void);
 void quit(void);
 void client_exit(void);
 void client_next(void);
-void move_pointer(void);
-void move_window(void);
+void pointer_move(void);
+void window_move(void);
 #define MOD(_mod) Mod1Mask|_mod
 #define EXECSH(key, arg)       {MOD(0), key, (void*)(execsh), arg}
 #define WORKSPACE(a)           {MOD(0), XK_##a, workspace_switch_to, #a}
@@ -76,8 +76,8 @@ struct {
     KEY(ShiftMask,  XK_q,       quit),
     KEY(0,          XK_Tab,     workspace_toggle),
     KEY(0,          XK_n,       client_next),
-    KEY(0,          XK_m,       move_pointer),
-    KEY(ShiftMask,  XK_m,       move_window),
+    KEY(0,          XK_m,       pointer_move),
+    KEY(ShiftMask,  XK_m,       window_move),
     WORKSPACE(1),
     WORKSPACE(2),
     WORKSPACE(3),
@@ -111,13 +111,13 @@ struct {
 #define RES2160 1.0
 
 void
-set_pointer(int x, int y) {
+pointer_set(int x, int y) {
     XWarpPointer(display, None, root, 0, 0, 0, 0, x, y);
     XSync(display, False);
 }
 
 void
-get_pointer(void) {
+pointer_get(void) {
     int di;
     unsigned int dui;
     Window dw;
@@ -163,7 +163,7 @@ client_info(void) {
 }
 
 void
-delete_client(struct client *c) {
+client_delete(struct client *c) {
     if (c == NULL)
         return;
     LOG("%ld", cid(c));
@@ -182,7 +182,7 @@ delete_client(struct client *c) {
 }
 
 struct client *
-new_client(Window w) {
+client_new(Window w) {
     struct client *c =
         (struct client*) malloc(sizeof(struct client));
     c->window = w;
@@ -204,7 +204,7 @@ new_client(Window w) {
 }
 
 struct client *
-find_client(Window w) {
+client_find(Window w) {
     struct client *c;
     int i, j;
 
@@ -253,7 +253,7 @@ client_exit(void) {
     LOG("[force] %ld", cid(cur_client));
     XGrabServer(display);
     XDestroyWindow(display, cur_window);
-    delete_client(cur_client);
+    client_delete(cur_client);
     XSync(display, False);
     XUngrabServer(display);
 }
@@ -267,22 +267,22 @@ client_next(void) {
 }
 
 void
-move_pointer(void) {
+pointer_move(void) {
     if (nscreen == 1)
         return;
     cur_screen = (cur_screen + 1) % nscreen;
     LOG("%d", cur_screen);
-    set_pointer(cur_sox, cur_soy);
+    pointer_set(cur_sox, cur_soy);
     if (cur_client)
         XRaiseWindow(display, cur_window);
 }
 
 void
-_map_window(Window w) {
+_window_map(Window w) {
     struct client *c;
 
-    if ((c = find_client(w)) == NULL)
-        c = new_client(w);
+    if ((c = client_find(w)) == NULL)
+        c = client_new(w);
 
     XSelectInput(display, w, EnterWindowMask);
     XMapWindow(display,w);
@@ -294,7 +294,7 @@ _map_window(Window w) {
 }
 
 void
-move_window(void) {
+window_move(void) {
     Window w;
 
     if (nscreen == 1)
@@ -305,9 +305,9 @@ move_window(void) {
 
     w = cur_window;
 
-    delete_client(cur_client);
-    move_pointer();
-    _map_window(w);
+    client_delete(cur_client);
+    pointer_move();
+    _window_map(w);
     XRaiseWindow(display, w);
 }
 
@@ -319,7 +319,7 @@ workspace_switch_to(void *arg) {
     if (w == workspace)
         return;
 
-    get_pointer();
+    pointer_get();
     last_workspace = workspace;
     workspace = w;
     LOG("%d", workspace);
@@ -329,7 +329,7 @@ workspace_switch_to(void *arg) {
     for(int i = 0; i < nscreen; i++)
         if (clients[workspace][i] != NULL)
             XRaiseWindow(display, clients[workspace][i]->window);
-    set_pointer(cur_px, cur_py);
+    pointer_set(cur_px, cur_py);
 }
 
 void
@@ -389,7 +389,7 @@ _EnterNotify(XEvent *ee) {
     struct client *c;
 
     LOG("%ld", wid(e->window));
-    if ((c = find_client(e->window)) == NULL)
+    if ((c = client_find(e->window)) == NULL)
         return;
 
     workspace = c->workspace;
@@ -417,7 +417,7 @@ void
 _MapRequest(XEvent *ee) {
     XMapRequestEvent *e = &ee->xmaprequest;
     LOG("%ld", wid(e->window));
-    _map_window(e->window);
+    _window_map(e->window);
 }
 
 void
@@ -426,10 +426,10 @@ _UnmapNotify(XEvent *ee) {
     struct client *c;
 
     LOG("%ld", wid(e->window));
-    if ((c = find_client(e->window)) == NULL)
+    if ((c = client_find(e->window)) == NULL)
         return;
 
-    delete_client(c);
+    client_delete(c);
 }
 
 void
@@ -567,7 +567,7 @@ setup(void) {
     }
     last_workspace = workspace = 1;
     cur_screen = 0;
-    set_pointer(cur_px, cur_py);
+    pointer_set(cur_px, cur_py);
 }
 
 void
@@ -585,7 +585,7 @@ clean(void) {
                 LOG("screen%d, window: %ld",
                     cur_screen, wid(cur_window));
                 XDestroyWindow(display, cur_window);
-                delete_client(cur_client);
+                client_delete(cur_client);
                 XSync(display, False);
             }
         }
