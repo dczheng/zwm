@@ -1,9 +1,10 @@
+#include <time.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <time.h>
 #include <limits.h>
 
 #include <X11/Xlib.h>
@@ -12,9 +13,8 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xinerama.h>
 
-#define length(_x) ((int)(sizeof(_x) / sizeof(_x[0])))
+#define LEN(_x) ((int)(sizeof(_x) / sizeof(_x[0])))
 
-FILE *log_fd;
 #define DIE(_fmt, ...) { \
     fprintf(stderr, "die in `%s %d`: "_fmt"\n", \
         __FUNCTION__, __LINE__, ##__VA_ARGS__); \
@@ -24,12 +24,12 @@ FILE *log_fd;
 #define LOG(_fmt, ...) { \
     time_t t = time(NULL); \
     struct tm *lt = localtime(&t); \
-    fprintf(log_fd, \
+    fprintf(stdout, \
         "[%02d:%02d:%02d %02d/%02d/%4d] [%04d] [%s] "_fmt"\n",\
         lt->tm_hour, lt->tm_min, lt->tm_sec, \
         lt->tm_mon+1, lt->tm_mday, lt->tm_year+1900, \
         __LINE__, __FUNCTION__, ##__VA_ARGS__); \
-    fflush(log_fd); \
+    fflush(stdout); \
 }
 
 struct client {
@@ -345,18 +345,19 @@ quit(void) {
 
 void
 execsh(void *arg) {
-    char *cmd = (char*)arg, buf[32];
+    char *cmd = (char*)arg, buf[128];
     double r = 1;
 
-#define RES(s) case s: r = RES##s; break;
     if (!strcmp(cmd, "zt")) {
+#define RES(s) case s: r = RES##s; break;
         switch (cur_sh) {
             RES(1080);
             RES(1400);
             RES(1440);
             RES(2160);
         }
-        snprintf(buf, sizeof(buf), "zt %.2lf", r);
+#undef RES
+        sprintf(buf, "zt -font-size %.2lf", r);
         cmd = buf;
     }
 
@@ -449,7 +450,7 @@ _KeyPress(XEvent *ee) {
     XKeyEvent *e = &ee->xkey;
     int i;
 
-    for(i = 0; i < length(keys); i++)
+    for(i = 0; i < LEN(keys); i++)
         if (keys[i].key
             == XKeycodeToKeysym(display, (KeyCode)e->keycode, 0)
             && (e->state == keys[i].mod)) {
@@ -511,7 +512,7 @@ setup(void) {
 
     LOG();
     if (!(display = XOpenDisplay(NULL)))
-        DIE("cannot open display");
+        DIE("failed to open display");
 
     XSetErrorHandler(xerror);
     s = DefaultScreen(display);
@@ -528,7 +529,7 @@ setup(void) {
     XSelectInput(display, root, wa.event_mask);
 
     XUngrabKey(display, AnyKey, AnyModifier, root);
-    for (i = 0; i < length(keys); i++)
+    for (i = 0; i < LEN(keys); i++)
         if ((code = XKeysymToKeycode(display, keys[i].key)))
                 XGrabKey(display, code, keys[i].mod, root, True,
         GrabModeAsync, GrabModeAsync);
@@ -607,19 +608,22 @@ clean(void) {
 
 int
 main(void) {
-    char fn[PATH_MAX];
+    int log = -1;
 
-    sprintf(fn, "%s/.zwm", getenv("HOME"));
-    if ((log_fd = fopen(fn, "w")) == NULL)
-        DIE("can't open log");
+    if ((log = open("/tmp/zwm.log", O_WRONLY | O_CREAT | O_APPEND, 0644)) == -1) {
+        LOG("failed to open log");
+    } else {
+        dup2(log, 1);
+        dup2(log, 2);
+    }
 
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR)
-        DIE("can't set SIGCHLD");
+        DIE("failed to set SIGCHLD");
 
     setup();
     run();
     clean();
 
-    fclose(log_fd);
+    if (log >= 0) close(log);
     return 0;
 }

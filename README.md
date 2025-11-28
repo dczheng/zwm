@@ -13,7 +13,7 @@ which manages windows in monocle layout and uses
 [Alt]+[Tab]        Go to previous workspace
 [Alt]+[n]          Go to next window
 [Alt]+[m]          Move mouse to next screen
-[Alt]+[s]          Run 'scrot -s -q 100 -o ~/snapshot.png'
+[Alt]+[s]          Run 'flameshot gui'
 [Alt]+[Shift]+[c]  Kill current window
 [Alt]+[Shift]+[q]  Exit
 ```

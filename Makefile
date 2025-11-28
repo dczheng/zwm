@@ -14,6 +14,6 @@ zwm: ${OBJ}
 $(OBJ): %.o:%.c ${INC} Makefile
 	${CC} -c ${CFLAGS} $<
 
+.PHONY: clean
 clean:
 	rm -f zwm ${OBJ}
-
