@@ -71,7 +71,7 @@ struct {
 } keys[] = {
     EXECSH(XK_Return, "zt"),
     EXECSH(XK_b,      "chromium"),
-    EXECSH(XK_s,      "flameshot gui"),
+    EXECSH(XK_s,      "ksnip -c"),
     KEY(ShiftMask,  XK_c,       client_exit),
     KEY(ShiftMask,  XK_q,       quit),
     KEY(0,          XK_Tab,     workspace_toggle),
